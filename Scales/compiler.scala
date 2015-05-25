@@ -1,4 +1,4 @@
-import scala.util.parsing.combinator._
+import util.parsing.combinator._
 
 object OP extends Enumeration {
   type OP = Value
@@ -9,7 +9,7 @@ import OP._
 
 object Type extends Enumeration {
   type Type = Value
-  val INT, ARR, STR, BOOL, OBJ, UNK = Value
+  val INT, ARR, STR, BOOL, OBJ, USR_T = Value
 }
 import Type._
 
@@ -17,8 +17,57 @@ abstract class Expr
 
 case class UnaOp(op: OP.Value, x: Expr) extends Expr
 case class OpExpr(op: OP.Value, x: Expr, y: Expr) extends Expr
-case class Add(x: Expr, y: Expr) extends Expr
 case class Constant(ty: Type, con: String) extends Expr
+case class While(grd: Expr, bod: Expr) extends Expr
+case class LetX(lets: Array[Expr], bod: Expr) extends Expr
+case class Seq(bod: Array[Expr]) extends Expr
+case class If(gd: Expr, then: Expr, els: Expr) extends Expr
+case class Ident(id: String) extends Expr
+case class Asgn(id: Expr, rval: Expr) extends Expr
+case class ArrAsgn(id: Expr, ind: Expr, rval: Expr) extends Expr
+case class MethodCall(id: Expr, args: Array[Expr]) extends Expr
+case class ClassCall(self: Expr, id: Expr, args: Array[Expr]) extends Expr
+
+class Cls () {
+
+  def getSuper() = "TODO"
+
+}
+
+object Cls {
+
+}
+
+class Feature () {
+
+  def getSuper() = "TODO"
+
+}
+
+object Feature {
+
+}
+
+class Formal () {
+
+  def getSuper() = "TODO"
+
+}
+
+object Formal {
+
+}
+
+class Let () {
+
+  def getSuper() = "TODO"
+
+}
+
+object Let {
+
+}
+
 
 class Comp extends RegexParsers with PackratParsers {
 
@@ -36,12 +85,32 @@ class Comp extends RegexParsers with PackratParsers {
     s => Constant(STR, s)
   }
 
-  def ident:PackratParser[Expr] = """(true)|(false)""".r  ^^ {
-    s => Constant(BOOL, s)
+  //Var stuff
+
+  def ident:PackratParser[Expr] = """[a-z][A-Za-z0-9_]*""".r  ^^ {
+    s => Ident(s)
+  }
+
+  def asgn:PackratParser[Expr] = ident ~ "<-" ~ expr  ^^ {
+    case a ~ _ ~ b => Asgn(a, b)
+  }
+
+  def arrasgn:PackratParser[Expr] = ident ~ "[" ~ expr ~ "]" ~ "<-" ~ expr  ^^ {
+    case a ~ _ ~ b ~ _ ~ _ ~ c => ArrAsgn(a, b, c)
   }
 
   def parens:PackratParser[Expr] = "(" ~ expr ~ ")" ^^ {
-    case (a ~ b ~ c) => b
+    case (_ ~ b ~ _) => b
+  }
+
+  //Methods and objects
+
+  def call:PackratParser[Expr] = ident ~ "(" ~ exprlist ~ ")" ^^ {
+    case (a ~ _ ~ b ~ _) => MethodCall(a, Array(a))
+  }
+
+  def classcall:PackratParser[Expr] = expr ~ "." ~ ident ~ "(" ~ exprlist ~ ")" ^^ {
+    case a ~ _ ~ b ~ _ ~ c ~ _ => ClassCall(a, b, Array(b))
   }
 
   // Arithmetic
@@ -100,14 +169,102 @@ class Comp extends RegexParsers with PackratParsers {
     case(a ~ "=" ~ b) => OpExpr(EQ, a, b)
   }
 
+  //Control structures
+  lazy val ifelse: PackratParser[Expr] = (
+    "if" ~ expr ~ "then" ~ expr ~ "else" ~ expr ~ "fi") ^^ {
+    case _ ~ a ~ _ ~ b ~ _ ~ c ~ _ => If(a, b, c) 
+  }
+
+  lazy val let: PackratParser[Let] = (
+    ident ~ ":" ~ typename ~ "<-" ~ expr |
+    ident ~ ":" ~ typename) ^^ {
+    s => new Let()
+  }
+
+  lazy val letlist: PackratParser[Unit] = (
+    let ~ "," ~ letlist | let) ^^ {
+    s => 
+  }
+
+  lazy val lets: PackratParser[Expr] = (
+    "let" ~ letlist ~ "in" ~ expr ~ "tel") ^^ {
+    s => LetX(Array(Constant(INT, "0")), Constant(INT, "0"))
+  }
+
+  lazy val exprlist: PackratParser[Unit] = (
+    expr ~ "," ~ exprlist | expr) ^^ {
+    s => 
+  }
+
+  lazy val exprseq: PackratParser[Unit] = (
+    expr ~ ";" ~ exprseq | expr) ^^ {
+    s => 
+  }
+
+  lazy val seq: PackratParser[Expr] = (
+    "{" ~ exprseq ~ "}") ^^ {
+    s => Seq(Array(Constant(INT, "0")))
+  }
+
+  lazy val loop: PackratParser[Expr] = (
+    "while" ~ expr ~ "loop" ~ expr ~ "pool") ^^ {
+    case(_ ~ g ~ _ ~ b ~ _) => While(g, b)
+  }
+
   lazy val expr: PackratParser[Expr] = (
     add | div | mult | sub |
-    integer | bool | parens |
-    not | les | leq | neq | gre | geq |eql | isvoid 
+    not | les | leq | neq | gre | geq |eql | isvoid |
+    call | classcall | 
+    integer | bool | parens | str_const |
+    lets | loop | seq | ifelse | asgn | arrasgn | ident 
   )
+
+  lazy val typename: PackratParser[String] = """([A-Z][A-Za-z0-9_]*)""".r ^^ {
+    s => s
+  }
+
+  lazy val formal: PackratParser[Formal] = (
+    ident ~ ":" ~ typename |
+    ident ~ ":" ~ "Int" ~ "[" ~ "]") ^^ {
+    s => new Formal()
+  }
+
+  lazy val formals: PackratParser[Unit] = (
+    formal ~ "," ~ formals |
+    formal) ^^ {
+    s => 
+  }
+    
+  lazy val feature: PackratParser[Feature] = (
+    ident ~ "(" ~ formals ~ ")" ~ ":" ~ typename ~ "{" ~ expr ~ "}" |
+    ident ~ "(" ~ ")" ~ ":" ~ typename ~ "{" ~ expr ~ "}" |
+    ident ~ ":" ~ "Int" ~ "[" ~ "]" |
+    ident ~ ":" ~ typename) ^^ {
+    s => new Feature()
+  }
+
+  lazy val features: PackratParser[Unit] = (
+    feature ~ ";" ~ features| 
+    feature ~ ";") ^^ 
+  {
+    s =>
+  }
+
+  lazy val cls: PackratParser[Cls] = 
+    "class" ~ typename ~ "{" ~ features ~ "}" ^^ {
+    a => new Cls()
+  }
+
+  lazy val prog: PackratParser[Array[Cls]] = cls  ^^ {
+    case c => Array(c)
+  }
 
 }
 
 object Compiler extends Comp {
-  def main(args: Array[String]) = println(parseAll(expr, "5+ -3"))
+  def main(args: Array[String]) = {
+    assert(args.length > 0)
+    val sauce = io.Source.fromFile(args(0)).mkString
+    println(parseAll(prog, sauce))
+  }
 }
