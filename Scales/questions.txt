@@ -1,2 +1,0 @@
-* There's something weird about classes vs objects. I should probably
-find out soon.

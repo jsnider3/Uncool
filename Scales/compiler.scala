@@ -28,46 +28,29 @@ case class ArrAsgn(id: Expr, ind: Expr, rval: Expr) extends Expr
 case class MethodCall(id: Expr, args: Array[Expr]) extends Expr
 case class ClassCall(self: Expr, id: Expr, args: Array[Expr]) extends Expr
 
-class Cls () {
+class Cls {
 
   def getSuper() = "TODO"
 
 }
 
-object Cls {
-
-}
-
-class Feature () {
+class Feature {
 
   def getSuper() = "TODO"
 
 }
 
-object Feature {
-
-}
-
-class Formal () {
+class Formal {
 
   def getSuper() = "TODO"
 
 }
 
-object Formal {
-
-}
-
-class Let () {
+class Let {
 
   def getSuper() = "TODO"
 
 }
-
-object Let {
-
-}
-
 
 class Comp extends RegexParsers with PackratParsers {
 
@@ -178,7 +161,7 @@ class Comp extends RegexParsers with PackratParsers {
   lazy val let: PackratParser[Let] = (
     ident ~ ":" ~ typename ~ "<-" ~ expr |
     ident ~ ":" ~ typename) ^^ {
-    s => new Let()
+    s => new Let
   }
 
   lazy val letlist: PackratParser[Unit] = (
@@ -226,13 +209,14 @@ class Comp extends RegexParsers with PackratParsers {
   lazy val formal: PackratParser[Formal] = (
     ident ~ ":" ~ typename |
     ident ~ ":" ~ "Int" ~ "[" ~ "]") ^^ {
-    s => new Formal()
+    s => new Formal
   }
 
-  lazy val formals: PackratParser[Unit] = (
+  lazy val formals: PackratParser[Array[_ >: Formal]] = (
     formal ~ "," ~ formals |
     formal) ^^ {
-    s => 
+    case a ~ _ ~ b => Array(a) ++ Array(b) 
+    case a => Array(a)
   }
     
   lazy val feature: PackratParser[Feature] = (
@@ -240,19 +224,20 @@ class Comp extends RegexParsers with PackratParsers {
     ident ~ "(" ~ ")" ~ ":" ~ typename ~ "{" ~ expr ~ "}" |
     ident ~ ":" ~ "Int" ~ "[" ~ "]" |
     ident ~ ":" ~ typename) ^^ {
-    s => new Feature()
+    s => new Feature
   }
 
-  lazy val features: PackratParser[Unit] = (
+  lazy val features: PackratParser[Array[_ >: Feature]] = (
     feature ~ ";" ~ features| 
     feature ~ ";") ^^ 
   {
-    s =>
+    case a ~ _ ~ b => Array(a) ++ Array(b) 
+    case a ~ _ => Array(a)
   }
 
   lazy val cls: PackratParser[Cls] = 
     "class" ~ typename ~ "{" ~ features ~ "}" ^^ {
-    a => new Cls()
+    a => new Cls
   }
 
   lazy val prog: PackratParser[Array[Cls]] = cls  ^^ {
