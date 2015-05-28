@@ -1,12 +1,12 @@
-TEST='scala Compiler ../tests/in/sort.uc'
+TEST='scala Uncool ../tests/in/sort.uc'
 
-all: compiler
+all: Uncool
 	@echo "Testing..."
 	@eval ${TEST}
 
-compiler: compiler.scala
+Uncool: parser.scala
 	@echo "Compiling..."
-	@scalac compiler.scala
+	@scalac parser.scala
 
 clean:
 	rm -f *.class
