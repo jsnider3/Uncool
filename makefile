@@ -8,4 +8,4 @@ scanner.java: uncool.jflex
 	jflex uncool.jflex
 
 clean:
-	-@rm *.class *.java *~ 2>/dev/null ||true
+	-@rm -f *.class Parser.java ParserVal.java scanner.java *~
