@@ -1,26 +1,41 @@
-import exprs._
+package scales
+import scales.exprs._
+import scala.collection.mutable.Map
 
 class Cls (name: String, parent: String, feats: List[Feature]){
 
   override def toString() = ("class " + name + " inherits " + parent + " {" +
                               feats.mkString("; ") + "}")
 
-  def getAttributes(prog: List[Cls]) : List[Attribute] = {
+  def getAttributes(prog: List[Cls]) : Map[String, String] = {
     var attrs = if (hasSuper()) {
       getSuper(prog).get.getAttributes(prog)
     } else {
-      List[Attribute]()
+      Map[String, String]()
     }
     for (feat <- feats) {
       feat match {
-        case Attribute(n, t) => if (attrs.find(x => x.name == n) != None) {
-            Main.logError("Duplicate field " + n + " in class " + name + ".")
+        case Attribute(n, t) => if (attrs.contains(n)) {
+            Log.error("Duplicate field " + n + " in class " + name + ".")
           }
-          attrs +:= Attribute(n,t)
+          attrs(n) = t
         case _ =>
       }
     }
     attrs
+  }
+  
+  def getMethod(name : String) : Method = {
+    val found = getMethods().find(x => x.name == name)
+    if (found != None) {
+      found.get
+    } else if (hasSuper()){
+      getSuper(Main.prog).get.getMethod(name)
+    } else {
+      println(Main.prog.map(a => a.Name()))
+      throw new IllegalArgumentException("Non-existent method " + name
+                                          + " in object " + Name())
+    }
   }
 
   def getMethods() : List[Method] = {
@@ -28,7 +43,7 @@ class Cls (name: String, parent: String, feats: List[Feature]){
    for (feat <- feats) {
       feat match {
         case Method(n, a, t, b) => if (methods.find(x => x.name == n) != None) {
-            Main.logError("Duplicate method " + n + " in class " + name + ".")
+            Log.error("Duplicate method " + n + " in class " + name + ".")
           }
           methods +:= Method(n, a, t, b)
         case _ =>
@@ -41,7 +56,7 @@ class Cls (name: String, parent: String, feats: List[Feature]){
     prog.find(a => a.Name() == parent)
   }
 
-  def hasSuper() = parent == ""
+  def hasSuper() = parent != ""
 
   def Feats() = feats
   def Name() = name

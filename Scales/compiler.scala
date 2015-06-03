@@ -1,13 +1,11 @@
+package scales
 import exprs._
-import Uncool._
+import scala.collection.mutable.Map
 
 object Main {
 
-  private var errors = List[String]()
-  private var prog = List[Cls]()
-  private val builtins = List("Int", "Int[]", "String", "Object")
-
-  //private var self :public static Class self;
+  var prog = List[Cls]()
+  val builtins = List("Int", "Int[]", "String", "Object")
 
   def findMain(prog: List[Cls]) : Boolean = {
     var found = false
@@ -21,10 +19,6 @@ object Main {
       }
     }
     found
-  }
-
-  def logError(err: String) = {
-    errors = errors :+ err
   }
 
   def makeBuiltIns(clses: List[Cls]) : List[Cls] = {
@@ -43,49 +37,52 @@ object Main {
     List[Cls](tyInt, tyArr, tyStr, tyObj) ++ clses
   }
 
+  def Prog() : List[Cls] = prog
+
   def typecheckClass(clas: Cls) = {
     if (!builtins.contains(clas.Name())) {
       if (clas.hasSuper() && clas.getSuper(prog) == None) {
-        logError(clas.Name() + " inherits from undefined " + clas.Parent())
+        Log.error(clas.Name() + " inherits from undefined " + clas.Parent())
       }
-      val state = Attribute("self", clas.Name()) :: clas.getAttributes(prog) 
-      clas.getMethods().foreach{a => typecheckMethod(a, state)}
-      println("TODO")
+      var typemap = clas.getAttributes(prog)
+      typemap("self") = clas.Name()
+      
+      clas.getMethods().foreach{a => typecheckMethod(a, typemap)}
     }
   }
 
-  def typecheckMethod(meth: Method, state: List[Attribute]) = {
-    /*Map<String,String> methodState=new HashMap<String,String>(typeMap);
-    ArrayList<String> argNames=new ArrayList<String>();*/
+  def typecheckMethod(meth: Method, state: Map[String, String]) = {
+    var methodState = state.clone()
     var argNames = List[String]()
     for(arg <- meth.args)
     {
       //UncoolAid 2.1.2 says that method params hide attrbiutes.
       if(argNames.contains(arg.name))
       {
-        logError("Duplicate " + arg.name + " in " + meth.name + " args.")
+        Log.error("Duplicate " + arg.name + " in " + meth.name + " args.")
       }
       argNames +:= arg.name
-      //state.put(arg.id,arg.ty);
+      methodState(arg.name) = arg.ty
     }
-    println(meth.name +":" + argNames)
-    /*String ty= getBody().typecheck(methodState);
-    if(!ty.equals(type))
+//    println(meth.name +":" + argNames)
+    val ty = meth.body.typecheck(methodState);
+    if(ty != meth.ty)
     {
-      logError(lineno,toString()+" returns "+ty+" declares "+type);
+      Log.error(meth.name + " returns " + ty + " declares " + meth.ty)
     }
-    setClass(self.name);*/
+    //TODO setClass(self.name);*/
   }
 
   def main(args: Array[String]) = {
     val ast : List[Cls] = Uncool.make_ast(args(0))
     if (!findMain(ast)) {
-      logError("Main not found.")
+      Log.error("Main not found.")
     }
     prog = makeBuiltIns(ast)
     prog.foreach{typecheckClass}
-    if (errors.length > 0) {
-      errors.foreach{println}
+    if (Log.errors.length > 0) {
+      println("The following type errors were found:")
+      Log.errors.foreach{println}
     } else {
       //TODO Compile
     } 

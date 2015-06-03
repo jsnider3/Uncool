@@ -1,24 +1,23 @@
-TEST='scala Main ../tests/in/sort.uc'
+TEST='scala scales.Main ../tests/in/sort.uc'
 
-all: Main.class Uncool.class exprs/Var.class
+all: scales/Main.class scales/Uncool.class scales/exprs/Var.class
 	@echo "Testing..."
 	@eval ${TEST}
 
-Main.class: compiler.scala Uncool.class exprs/Var.class Cls.class
-	@echo "Compiling..."
-	@scalac compiler.scala
+scales/Main.class: compiler.scala scales/Uncool.class scales/exprs/Var.class scales/Log.class
+	scalac compiler.scala
 
-Uncool.class: parser.scala exprs/Var.class Cls.class
-	@echo "Compiling..."
-	@scalac parser.scala
+scales/Uncool.class: parser.scala scales/exprs/Var.class scales/Cls.class scales/Log.class
+	scalac parser.scala
 
-exprs/Var.class: expressions.scala
-	@echo "Compiling..."
-	@scalac expressions.scala
+scales/exprs/Var.class: expressions.scala scales/Log.class
+	scalac expressions.scala
 
-Cls.class: Cls.scala
-	@echo "Compiling..."
-	@scalac Cls.scala
+scales/Cls.class: Cls.scala scales/Log.class
+	scalac Cls.scala
+
+scales/Log.class: log.scala
+	scalac log.scala
 
 clean:
-	rm -rf *.class exprs
+	rm -rf *.class scales

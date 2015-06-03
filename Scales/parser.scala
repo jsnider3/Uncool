@@ -1,3 +1,4 @@
+package scales
 import util.parsing.combinator._
 import exprs._
 
