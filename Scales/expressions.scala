@@ -142,20 +142,26 @@ case class ArrGet(id: Expr, ind: Expr) extends Expr {
   }
 }
 
-case class MethodCall(id: Expr, args: List[Expr]) extends Expr {
+trait Callable {
+  def typecheckCall(meth: Method, args: List[Expr], state: Map[String, String]) = {
+    val vals = args.map(a => a.typecheck(state))
+    if (vals.length != meth.args.length) {
+      Log.error("Method call on " + meth + " has wrong number of args.")
+    }
+    val bindings = meth.args zip vals
+    bindings.foreach{case (Attribute(n, t), v) => if (v != t) {
+      Log.error("Arg of wrong type")
+    }}
+  }
+}
+
+case class MethodCall(id: Expr, args: List[Expr]) extends Expr with Callable {
   def typecheck(state: Map[String, String]) : String = {
     val cls = Main.prog.find(a => a.Name() == state("self")).get
     id match {
       case Var(n) => {
         val meth = cls.getMethod(n)
-        val vals = args.map(a => a.typecheck(state))
-        if (vals.length != meth.args.length) {
-          Log.error("Method call on " + meth + " has wrong number of args.")
-        }
-        val bindings = meth.args zip vals
-        bindings.foreach{case (Attribute(n, t), v) => if (v != t) {
-          Log.error("Arg of wrong type")
-        }}
+        typecheckCall(meth, args, state)
         meth.ty
       }
       case _ => {
@@ -166,7 +172,8 @@ case class MethodCall(id: Expr, args: List[Expr]) extends Expr {
   }
 }
 
-case class ClassCall(self: Expr, id: Expr, args: List[Expr]) extends Expr {
+case class ClassCall(self: Expr, id: Expr, args: List[Expr]) extends Expr
+                                                             with Callable{
   def typecheck(state: Map[String, String]) : String = {
     (self, id) match {
       case (Var(c), Var(m)) => {
@@ -175,14 +182,7 @@ case class ClassCall(self: Expr, id: Expr, args: List[Expr]) extends Expr {
           Log.error("class call on non-existent " + c + ".")
         }
         val meth = clsopt.get.getMethod(m)
-        val vals = args.map(a => a.typecheck(state))
-        if (vals.length != meth.args.length) {
-          Log.error("Class call on " + m + " has wrong number of args.")
-        }
-        val bindings = meth.args zip vals
-        bindings.foreach{case (Attribute(n, t), v) => if (v != t) {
-          Log.error("Arg of wrong type")
-        }}
+        typecheckCall(meth, args, state)
         meth.ty
       }
       case _ => {
