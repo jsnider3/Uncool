@@ -9,7 +9,7 @@ object Main {
 
   def findMain(prog: List[Cls]) : Boolean = {
     var found = false
-    val Main = prog.find(a => a.Name() == "Main")
+    val Main = prog.find({_.Name() == "Main"})
     if (Main != None) {
       for (feat <- Main.get.Feats()) {
         feat match {
@@ -47,7 +47,7 @@ object Main {
       var typemap = clas.getAttributes(prog)
       typemap("self") = clas.Name()
       
-      clas.getMethods().foreach{a => typecheckMethod(a, typemap)}
+      clas.getMethods().foreach{typecheckMethod(_, typemap)}
     }
   }
 

@@ -26,13 +26,13 @@ class Cls (name: String, parent: String, feats: List[Feature]){
   }
   
   def getMethod(name : String) : Method = {
-    val found = getMethods().find(x => x.name == name)
+    val found = getMethods().find({_.name == name})
     if (found != None) {
       found.get
     } else if (hasSuper()){
       getSuper(Main.prog).get.getMethod(name)
     } else {
-      println(Main.prog.map(a => a.Name()))
+      println(Main.prog map {_.Name()})
       throw new IllegalArgumentException("Non-existent method " + name
                                           + " in object " + Name())
     }
@@ -53,7 +53,7 @@ class Cls (name: String, parent: String, feats: List[Feature]){
   }
 
   def getSuper(prog: List[Cls]) : Option[Cls] = {
-    prog.find(a => a.Name() == parent)
+    prog.find({_.Name() == parent})
   }
 
   def hasSuper() = parent != ""

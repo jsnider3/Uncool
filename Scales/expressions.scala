@@ -27,6 +27,7 @@ case class UnaOp(op: OP.Value, x: Expr) extends Expr {
       "Bool"
     }
   }
+
 }
 
 case class OpExpr(op: OP.Value, x: Expr, y: Expr) extends Expr{
@@ -41,10 +42,12 @@ case class OpExpr(op: OP.Value, x: Expr, y: Expr) extends Expr{
       "Int"
     }
   }
+
 }
 
 case class Constant(ty: String, con: String) extends Expr {
   def typecheck(state: Map[String, String]) : String = ty
+
 }
 
 case class While(grd: Expr, bod: Expr) extends Expr {
@@ -55,21 +58,24 @@ case class While(grd: Expr, bod: Expr) extends Expr {
     bod.typecheck(state)
     "Int"
   }
+
 }
 
 case class LetX(lets: List[Let], bod: Expr) extends Expr {
   def typecheck(state: Map[String, String]) : String = {
     var letstate = state.clone()
-    lets.foreach{x => x.typecheck(letstate)}
-    lets.foreach{x => x.load(letstate)}
+    lets.foreach{_.typecheck(letstate)}
+    lets.foreach{_.load(letstate)}
     bod.typecheck(letstate)
   }
+
 }
 
 case class Seq(bod: List[Expr]) extends Expr {
   def typecheck(state: Map[String, String]) : String = {
-    bod.map(x => x.typecheck(state)).last
+    (bod map {_.typecheck(state)}).last
   }
+
 }
 
 case class If(gd: Expr, then: Expr, els: Expr) extends Expr {
@@ -144,7 +150,7 @@ case class ArrGet(id: Expr, ind: Expr) extends Expr {
 
 trait Callable {
   def typecheckCall(meth: Method, args: List[Expr], state: Map[String, String]) = {
-    val vals = args.map(a => a.typecheck(state))
+    val vals = args map {_.typecheck(state)}
     if (vals.length != meth.args.length) {
       Log.error("Method call on " + meth + " has wrong number of args.")
     }
@@ -157,7 +163,7 @@ trait Callable {
 
 case class MethodCall(id: Expr, args: List[Expr]) extends Expr with Callable {
   def typecheck(state: Map[String, String]) : String = {
-    val cls = Main.prog.find(a => a.Name() == state("self")).get
+    val cls = Main.prog.find({_.Name() == state("self")}).get
     id match {
       case Var(n) => {
         val meth = cls.getMethod(n)
@@ -177,7 +183,7 @@ case class ClassCall(self: Expr, id: Expr, args: List[Expr]) extends Expr
   def typecheck(state: Map[String, String]) : String = {
     (self, id) match {
       case (Var(c), Var(m)) => {
-        val clsopt = Main.prog.find(a => a.Name() == c)
+        val clsopt = Main.prog.find({_.Name() == c})
         if (clsopt == None) {
           Log.error("class call on non-existent " + c + ".")
         }
